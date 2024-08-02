@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Translator</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', 'Times';
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            margin-top: -60px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 400px;
+            text-align: center;
+        }
+        h2 {
+            font-family: 'Times New Roman', 'Times' serif;
+            margin-top: 0;
+            font-size: 35px;
+            font-weight: 100;
+        }
+        .mic-btn {
+            background-color: white;
+            color: white;
+            border: none;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        #language-select, #translate-to-select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        #speechText {
+            width: calc(100% - 70px);
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        #speechText:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        #mic-icon {
+            width: 24px;
+            height: 24px;
+            fill: #ffffff;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+        .error-message {
+            color: red;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Voice Translator</h2>
+        <form id="translator-form" action="{% url 'translate' %}" method="post">
+            {% csrf_token %}
+            <select id="language-select" name="input_language_code">
+                <option disabled selected>Choose Input Language</option>
+            {% for code, language in codes_and_languages %}
+                    <option value="{{ code }}">{{ language }}</option>
+            {% endfor %}
+            </select>
+            <select id="translate-to-select" name="output_language_code">
+                <option disabled selected>Choose Output Language</option>
+            {% for code, language in codes_languages %}
+                    <option value="{{ code }}">{{ language }}</option>
+            {% endfor %}
+            </select>
+            
+            <h3 style="display: flex;">You said:{% if input %} {{ input }} {% endif %}</h3>
+            <h3 style="display: flex;">Output:{% if trans %} {{ trans }} {% endif %}
+                {% if error %} {{ error }} {% endif %}
+            </h3>
+
+            <p class="error-message" id="error-message">Please select both languages.</p>
+
+            <button type="submit" class="mic-btn" id="start-recording-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="50" height="50" viewBox="0 0 256 256" xml:space="preserve">
+                    <defs>
+                    </defs>
+                    <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;" transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
+                        <path d="M 45 0 c -8.481 0 -15.382 6.9 -15.382 15.382 v 29.044 c 0 8.482 6.9 15.382 15.382 15.382 s 15.382 -6.9 15.382 -15.382 V 15.382 C 60.382 6.9 53.481 0 45 0 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(62,150,255); fill-rule: nonzero; opacity: 1;" transform="matrix(1 0 0 1 0 0)" stroke-linecap="round"/>
+                        <path d="M 69.245 38.312 c -1.104 0 -2 0.896 -2 2 v 6.505 c 0 12.266 -9.979 22.244 -22.245 22.244 s -22.245 -9.979 -22.245 -22.244 v -6.505 c 0 -1.104 -0.896 -2 -2 -2 s -2 0.896 -2 2 v 6.505 c 0 13.797 10.705 25.134 24.245 26.16 V 86 h -9.126 c -1.104 0 -2 0.896 -2 2 s 0.896 2 2 2 h 22.252 c 1.104 0 2 -0.896 2 -2 s -0.896 -2 -2 -2 H 47 V 72.978 c 13.54 -1.026 24.245 -12.363 24.245 -26.16 v -6.505 C 71.245 39.208 70.35 38.312 69.245 38.312 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(62,150,255); fill-rule: nonzero; opacity: 1;" transform="matrix(1 0 0 1 0 0)" stroke-linecap="round"/>
+                    </g>
+                </svg>
+            </button>
+            
+        </form>
+        <h3 id="speak-now" style="display: none; color:red; font-weight: lighter; font-size: 20px;">Speak Now</h3>
+    </div>
+    <script>
+        document.getElementById('start-recording-btn').addEventListener('click', function(event) {
+            const inputLanguage = document.getElementById('language-select').value;
+            const outputLanguage = document.getElementById('translate-to-select').value;
+            const errorMessage = document.getElementById('error-message');
+
+            if (inputLanguage === "Choose Input Language" || outputLanguage === "Choose Output Language") {
+                event.preventDefault();
+                errorMessage.style.display = 'block';
+            } else {
+                errorMessage.style.display = 'none';
+                document.getElementById('speak-now').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
